@@ -8,11 +8,11 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 
-class ClassifierHelper(context Context) {
+class ClassifierHelper(context: Context) {
 
-    private val interpreter Interpreter
+    private val interpreter: Interpreter
     private val labels = listOf(
-        carton, vidrio, metal, papel, plastico, organico
+        "carton", "vidrio", "metal", "papel", "plastico", "organico"
     )
 
     init {
@@ -20,8 +20,8 @@ class ClassifierHelper(context Context) {
         interpreter = Interpreter(modelBuffer)
     }
 
-    private fun loadModelFile(context Context) ByteBuffer {
-        val assetFileDescriptor = context.assets.openFd(trash_classifier.tflite)
+    private fun loadModelFile(context: Context): ByteBuffer {
+        val assetFileDescriptor = context.assets.openFd("trash_classifier.tflite")
         val inputStream = FileInputStream(assetFileDescriptor.fileDescriptor)
         val fileChannel = inputStream.channel
         val startOffset = assetFileDescriptor.startOffset
@@ -29,17 +29,17 @@ class ClassifierHelper(context Context) {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
-    fun classify(bitmap Bitmap) TrashInfo {
-        val input = ByteBuffer.allocateDirect(1  224  224  3  4)
+    fun classify(bitmap: Bitmap): TrashInfo {
+        val input = ByteBuffer.allocateDirect(1 * 224 * 224 * 3 * 4)
         input.order(ByteOrder.nativeOrder())
 
-        val pixels = IntArray(224  224)
-        bitmap.getPixels(pixels, 0, 224, 0,  ​0, 224, 224)
+        val pixels = IntArray(224 * 224)
+        bitmap.getPixels(pixels, 0, 224, 0, 0, 224, 224)
 
         for (pixel in pixels) {
-            val r = ((pixel shr 16) and 0xFF)  127.5f - 1f
-            val g = ((pixel shr 8)and 0xFF)  127.5f -  ​1f
-            val b = (pixel and 0xFF)  127.5f - 1f
+            val r = ((pixel shr 16) and 0xFF) / 127.5f - 1f
+            val g = ((pixel shr 8) and 0xFF) / 127.5f - 1f
+            val b = (pixel and 0xFF) / 127.5f - 1f
             input.putFloat(r)
             input.putFloat(g)
             input.putFloat(b)
@@ -52,14 +52,14 @@ class ClassifierHelper(context Context) {
         var maxIndex = 0
         var maxScore = scores[0]
         for (i in 1 until scores.size) {
-            if (scores[i]  maxScore) {
+            if (scores[i] > maxScore) {
                 maxScore = scores[i]
                 maxIndex = i
             }
         }
 
         val predictedClass = labels[maxIndex]
-        val confidence = maxScore  100
+        val confidence = maxScore * 100
         val info = TrashInfo.getInfo(predictedClass)
         return info.copy(confidence = confidence)
     }
